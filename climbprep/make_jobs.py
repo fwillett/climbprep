@@ -47,7 +47,7 @@ if __name__ == '__main__':
     argparser.add_argument('-t', '--time', type=int, default=72, help='Maximum number of hours to train models')
     argparser.add_argument('-n', '--n-cores', type=int, default=8, help='Number of cores to request')
     argparser.add_argument('-m', '--memory', type=int, default=128, help='Number of GB of memory to request')
-    argparser.add_argument('-P', '--partition', default='sphinx', help=('Value for SLURM --partition setting, if '
+    argparser.add_argument('-P', '--partition', default='sphinx-lo', help=('Value for SLURM --partition setting, if '
                                                                       'applicable'))
     argparser.add_argument('-a', '--account', default='nlp', help='Value for SLURM --account setting, if applicable')
     argparser.add_argument('-e', '--exclude', nargs='+', help='Nodes to exclude')
@@ -172,8 +172,15 @@ if __name__ == '__main__':
                 has_this_session = False
                 if not session:
                     has_this_session = True
-                for path in os.listdir(os.path.join(sourcedata_path, f'sub-{participant}')):
-                    if path == f'ses-{session}':
+                dirs_to_match = []
+                if os.path.exists(os.path.join(sourcedata_path, f'sub-{participant}')):
+                    for x in os.listdir(os.path.join(sourcedata_path, f'sub-{participant}')):
+                        dirs_to_match.append(os.path.join(sourcedata_path, f'sub-{participant}', x))
+                if os.path.exists(os.path.join(BIDS_PATH, project, f'sub-{participant}')):
+                    for x in os.listdir(os.path.join(BIDS_PATH, project, f'sub-{participant}')):
+                        dirs_to_match.append(os.path.join(BIDS_PATH, project, f'sub-{participant}', x))
+                for path in dirs_to_match:
+                    if os.path.basename(path) == f'ses-{session}':
                         has_this_session = True
                 if not has_this_session:
                     continue

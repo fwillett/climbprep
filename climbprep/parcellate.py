@@ -235,7 +235,7 @@ def parcellate_surface(
         X = pca.fit_transform(X)
 
     stderr('Parcellating\n')
-    X = FastICA(n_components=n_networks).fit_transform(X)
+    X = FastICA(n_components=n_networks, whiten_solver='eigh').fit_transform(X)
 
     # Assume a network covers < half the mask volume, flip sign accordingly
     X = np.where(np.median(X, axis=0, keepdims=True) > 0, -X, X)
@@ -469,7 +469,7 @@ def parcellate_volume(
         X = pca.fit_transform(X)
 
     stderr('Parcellating\n')
-    X = FastICA(n_components=n_networks).fit_transform(X)
+    X = FastICA(n_components=n_networks, whiten_solver='eigh').fit_transform(X)
 
     # Assume a network covers < half the mask volume, flip sign accordingly
     X = np.where(np.median(X, axis=0, keepdims=True) > 0, -X, X)
@@ -639,6 +639,9 @@ if __name__ == '__main__':
         if session:
             subdir = os.path.join(subdir, 'ses-%s' % session)
         clean_path = os.path.join(derivatives_path, 'clean', cleaning_label, subdir)
+        if not os.path.exists(clean_path):
+            stderr(f'No cleaned functional data at expected location{clean_path}. Skipping...\n')
+            continue
 
         functional_paths = []
         for path in os.listdir(clean_path):
@@ -768,7 +771,8 @@ if __name__ == '__main__':
         nodes['subject']['functional_paths'] += functional_paths
 
     parcellation_dir = os.path.join(derivatives_path, 'parcellate', parcellation_label)
-    for node in nodes:
+    node_keys = [x for x in ('subject', 'session') if x in nodes]
+    for node in node_keys:
         node_dir = os.path.join(parcellation_dir, f'node-{node}')
         participant_dir = os.path.join(node_dir, 'sub-%s' % participant)
         if node == 'subject':

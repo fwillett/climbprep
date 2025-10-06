@@ -24,10 +24,14 @@ if __name__ ==  '__main__':
     argparser.add_argument('-T', '--tasks', nargs='*', help=('Space-delimited list of tasks to include or a `*.tsv` '
                                                               'table containing a list of tasks. If this argument is '
                                                               'empty, all tasks will be included.'))
+    argparser.add_argument('-C', '--clean', action='store_true', help=('If target dataset exists, clear all '
+                                                                       'non-matching subjects. Otherwise, matching '
+                                                                       'subjects will be added to existing ones.'))
     args = argparser.parse_args()
 
     project = args.project
     source = args.source_project
+    clean = args.clean
 
     # Infer relevant participants and sessions
     participants = set(args.participants) or None
@@ -189,28 +193,29 @@ if __name__ ==  '__main__':
                 stderr(f'Session path {session_path} not found, creating.\n')
                 os.symlink(source_path, session_path, target_is_directory=True)
 
-    # Clear incorrect BIDSified data
-    for participant_path in os.listdir(project_path):
-        if participant_path.startswith('sub-'):
-            participant = participant_path[4:]
-            if participant not in participants:
-                shutil.rmtree(os.path.join(project_path, participant_path))
-            else:
-                for session_path in os.listdir(os.path.join(project_path, participant_path)):
-                    session = session_path[4:]
-                    if session not in sessions:
-                        shutil.rmtree(os.path.join(project_path, participant_path, session_path))
-
-    # Clear incorrect sourcedata links
-    sourcedata_path = os.path.join(project_path, 'sourcedata')
-    for participant_path in os.listdir(sourcedata_path):
-        if participant_path.startswith('sub-'):
-            participant = participant_path[4:]
-            if participant not in participants:
-                shutil.rmtree(os.path.join(sourcedata_path, participant_path))
-            else:
-                for session_path in os.listdir(os.path.join(sourcedata_path, participant_path)):
-                    session = session_path[4:]
-                    if session not in sessions:
-                        os.remove(os.path.join(sourcedata_path, participant_path, session_path))
+    if clean:
+        # Clear incorrect BIDSified data
+        for participant_path in os.listdir(project_path):
+            if participant_path.startswith('sub-'):
+                participant = participant_path[4:]
+                if participant not in participants:
+                    shutil.rmtree(os.path.join(project_path, participant_path))
+                else:
+                    for session_path in os.listdir(os.path.join(project_path, participant_path)):
+                        session = session_path[4:]
+                        if session not in sessions:
+                            shutil.rmtree(os.path.join(project_path, participant_path, session_path))
+    
+        # Clear incorrect sourcedata links
+        sourcedata_path = os.path.join(project_path, 'sourcedata')
+        for participant_path in os.listdir(sourcedata_path):
+            if participant_path.startswith('sub-'):
+                participant = participant_path[4:]
+                if participant not in participants:
+                    shutil.rmtree(os.path.join(sourcedata_path, participant_path))
+                else:
+                    for session_path in os.listdir(os.path.join(sourcedata_path, participant_path)):
+                        session = session_path[4:]
+                        if session not in sessions:
+                            os.remove(os.path.join(sourcedata_path, participant_path, session_path))
 

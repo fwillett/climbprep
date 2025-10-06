@@ -188,7 +188,7 @@ if __name__ == '__main__':
             cmd = ('dcm2bids -d %s -p %s%s -c %s -o %s --auto_extract_entities%s --skip_dcm2niix --force_dcm2bids' %
                    (os.path.join(tmp_dir, 'tmp_dcm2bids', 'helper'), participant, session_str, config_path,
                     project_path, overwrite_str))
-            print(cmd)
+            stderr(cmd + '\n')
             status = os.system(cmd)
             if status:
                 stderr('Error during dcm2bids. Exiting\n.')

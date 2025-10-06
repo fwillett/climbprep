@@ -244,21 +244,21 @@ CONFIG = dict(
             cleaning_label=CLEAN_DEFAULT_KEY,
             space='fsnative',
             n_networks=50,
-            n_components_pca='auto',
+            n_components_pca=None,
             surface=True
         ),
         T1w=dict(
             cleaning_label=CLEAN_DEFAULT_KEY,
             space='T1w',
             n_networks=50,
-            n_components_pca='auto',
+            n_components_pca=None,
             surface=False
         ),
         mni=dict(
             cleaning_label=CLEAN_DEFAULT_KEY,
             space='MNI152NLin2009cAsym',
             n_networks=50,
-            n_components_pca='auto',
+            n_components_pca=None,
             surface=False
         ),
     ),
