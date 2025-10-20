@@ -27,7 +27,6 @@ if __name__ == '__main__':
     argparser.add_argument('-p', '--project', default='climblab', help=('Name of BIDS project (e.g., "climblab", '
                                                                         '"evlab", etc.). Default: "climblab"'))
     argparser.add_argument('-s', '--sessions', nargs='+', help="BIDS session ID(s).")
-    argparser.add_argument('-S', '--space', default=None, help="Process only the space specified")
     argparser.add_argument('-c', '--config', default=CLEAN_DEFAULT_KEY, help=('Config name (default `fc`) '
         'or YAML config file to used to parameterize cleaning. '
         'See `climbprep.constants.CONFIG["clean"]` for available config names and their settings. '))
@@ -166,9 +165,11 @@ if __name__ == '__main__':
                     
                     TR = sidecar.get('RepetitionTime', None)
                     StartTime = sidecar.get('StartTime', None)
+                    SliceTimingCorrected = sidecar.get('SliceTimingCorrected', None)
                     
                     assert TR, 'RepetitionTime information not found in sidecar: %s' % sidecar_path
-                    #assert StartTime, 'StartTime information not found in sidecar: %s' % sidecar_path
+                    assert (SliceTimingCorrected and StartTime) or (not SliceTimingCorrected and StartTime is None), 'Either SliceTimingCorrected must be true with a StartTime, or SliceTimingCorrected must be false with no specified StartTime: %s' % sidecar_path
+                        
                     StartTime = 0.0 if StartTime is None else StartTime
                     
                     if space not in datasets:
@@ -223,8 +224,11 @@ if __name__ == '__main__':
                     
                     TR = sidecar.get('RepetitionTime', None)
                     StartTime = sidecar.get('StartTime', None)
+                    SliceTimingCorrected = sidecar.get('SliceTimingCorrected', None)
+                    
                     assert TR, 'RepetitionTime information not found in sidecar: %s' % sidecar_path
-                    #assert StartTime, 'StartTime information not found in sidecar: %s' % sidecar_path
+                    assert (SliceTimingCorrected and StartTime) or (not SliceTimingCorrected and StartTime is None), 'Either SliceTimingCorrected must be true with a StartTime, or SliceTimingCorrected must be false with no specified StartTime: %s' % sidecar_path
+                        
                     StartTime = 0.0 if StartTime is None else StartTime
                     
                     if space not in datasets:
@@ -247,8 +251,9 @@ if __name__ == '__main__':
             os.makedirs(out_dir)
 
         #filter dictionary by space type if specified
-        if args.space: 
-            datasets = {k: v for k, v in datasets.items() if k == args.space}
+        space_specifier = config.get("space", None)
+        if space_specifier: 
+            datasets = {k: v for k, v in datasets.items() if k == space_specifier}
 
         for space in datasets:
             geodesic_smoothing_weights = None

@@ -72,3 +72,14 @@ if __name__ == '__main__':
 
     stderr(cmd + '\n')
     os.system(cmd)
+
+    #additional post-fmriprep step converts freesurfer inflated surfaces into .gii files like the rest of them (pial, white, etc.)
+    import climbprep.convert_inflated
+    climbprep.convert_inflated.main([
+        project,
+        "sub-"+participant,
+        "--fmriprep-image", FMRIPREP_IMG,
+        "--fs-license", FS_LICENSE_PATH,
+        "--bids-root", BIDS_PATH,
+    ])
+

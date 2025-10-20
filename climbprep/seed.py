@@ -55,7 +55,7 @@ if __name__ == '__main__':
         assert os.path.exists(config), ('Provided config (%s) does not match any known keyword or any existing '
                                         'filepath. Please provide a valid config.' % config)
         seed_label = os.path.basename(config)[:-9]
-        config_default = CONFIG['seed'][PREPROCESS_DEFAULT_KEY]
+        config_default = CONFIG['seed'][SEED_DEFAULT_KEY]
         with open(config, 'r') as f:
             config = yaml.safe_load(f)
     for key in config_default:

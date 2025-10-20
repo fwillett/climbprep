@@ -30,7 +30,7 @@ def find_left_pial_dir(out_root: Path, sub: str) -> Path:
     # If multiple found, take the first (usually ses-1/anat)
     return matches[0].parent
 
-def main():
+def main(argv=None):
     ap = argparse.ArgumentParser(
         description="Convert FreeSurfer lh.inflated to GIFTI in the same dir as *_hemi-L_pial.surf.gii."
     )
@@ -40,7 +40,7 @@ def main():
     ap.add_argument("-f", "--fs-license", default="/juice6/u/nlp/climblab/freesurfer/license.txt")
     ap.add_argument("-r", "--bids-root", default="/juice6/u/nlp/climblab/BIDS")
 
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     project = args.project
     sub = args.subject
@@ -68,7 +68,7 @@ def main():
     #convert L and R hemisphere
     for hemi_codes in [['lh','L'],['rh','R']]:
         # 2) Build the path to the FS inflated surface produced by fMRIPrep
-        matches = list((out_root / "sourcedata" / "freesurfer").rglob("**/" + hemi_codes[0] + ".inflated"))
+        matches = list((out_root / "sourcedata" / "freesurfer" / sub).rglob("**/" + hemi_codes[0] + ".inflated"))
         h_inflated = matches[0]
         
         if not h_inflated.exists():
