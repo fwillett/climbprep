@@ -14,7 +14,7 @@ def find_left_pial_dir(out_root: Path, sub: str) -> Path:
     Find the directory that contains {SUB}_hemi-L_pial.surf.gii.
     Returns the parent directory (DST).
     """
-    pattern = f"{sub}_*_hemi-L_pial.surf.gii"
+    pattern = f"{sub}*hemi-L_pial.surf.gii"
     # Search within .../derivatives/preprocess/main/<sub>/**/anat/
     search_root = out_root / sub
     if not search_root.exists():
@@ -68,7 +68,7 @@ def main(argv=None):
     #convert L and R hemisphere
     for hemi_codes in [['lh','L'],['rh','R']]:
         # 2) Build the path to the FS inflated surface produced by fMRIPrep
-        matches = list((out_root / "sourcedata" / "freesurfer" / sub).rglob("**/" + hemi_codes[0] + ".inflated"))
+        matches = list((out_root / "sourcedata" / "freesurfer").rglob("**/" + hemi_codes[0] + ".inflated"))
         h_inflated = matches[0]
         
         if not h_inflated.exists():

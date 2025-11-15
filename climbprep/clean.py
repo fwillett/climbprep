@@ -332,8 +332,12 @@ if __name__ == '__main__':
                             low_pass=config['low_pass'],
                             high_pass=config['high_pass']
                         )
+                        
                         kwargs = dict(confounds=confounds.fillna(0))
                         desc = 'desc-clean'
+                        if kwargs['confounds'].empty:
+                            kwargs['confounds'] = None
+                                                    
                         run = masker.fit_transform(func_path, **kwargs)
                         run = masker.inverse_transform(run)
                         run_path = os.path.join(
@@ -389,6 +393,9 @@ if __name__ == '__main__':
                             continue
                         img = surface.SurfaceImage(mesh, data)
 
+                        if kwargs['confounds'].empty:
+                            kwargs['confounds'] = None
+                        
                         run = masker.fit_transform(img, **kwargs)
                         run = masker.inverse_transform(run)
                         for hemi in ('left', 'right'):
