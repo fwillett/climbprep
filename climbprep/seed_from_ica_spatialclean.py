@@ -61,7 +61,9 @@ if __name__ == '__main__':
                      'Set to 0 to disable (default: 128.0).')
     ap.add_argument('--dummy-vols', type=float, default=0,
             help='Number of dummy volumes to exclude.')
-    ap.add_argument('--mode', default='keep_signal',
+    ap.add_argument('--ica-label', default='fsnative',
+                help='ica run label')
+    ap.add_argument('--mode', default='regressors',
                 help='keep_signal or remove_noise or regressors')
     
     args = ap.parse_args()
@@ -70,7 +72,7 @@ if __name__ == '__main__':
     target_session = args.sessions
     dummy_vols = int(args.dummy_vols)
     node = 'session' if target_session else 'subject'
-    ica_label = 'fsnative'
+    ica_label = args.ica_label
     clean_mode = args.mode
 
     #ica input dir
@@ -138,21 +140,18 @@ if __name__ == '__main__':
         Ymat = scipy.stats.zscore(Ymat, axis=1)
         Ymat[np.isnan(Ymat)]=0
 
-        assert clean_mode=='regressorsonly' or clean_mode=='regressors', "invalid clean mode"
+        assert clean_mode=='regressorsonly' or clean_mode=='regressors' or clean_mode=='cleansignal', "invalid clean mode"
+
+        confounds_path = bold_filenames[file_idx].replace("_space-T1w_desc-preproc_bold.nii.gz", "_desc-confounds_timeseries.tsv")
+        #confounds_regex = r'^(?:trans|rot)_[xyz](?:$|_(?:derivative1|power2|derivative1_power2)$)|global_signal(?:$|_derivative1|_power2|_derivative1_power2)$|a_comp_cor_.*|non_steady_state_outlier.*|motion_outlier.*|framewise_displacement$'
+        confounds_regex = r'^(?:trans|rot)_[xyz](?:$|_(?:derivative1|power2)$)|global_signal(?:$|_derivative1|_power2)$|a_comp_cor_0[0-4]$|non_steady_state_outlier.*|motion_outlier.*|framewise_displacement$'
+        
+        confounds = pd.read_csv(confounds_path, sep='\t')
+        confounds = confounds.filter(regex=confounds_regex)
+        confounds = confounds.fillna(0)
 
         if clean_mode == 'regressorsonly':
             Y_residual = Ymat
-
-            confounds_path = bold_filenames[file_idx].replace("_space-T1w_desc-preproc_bold.nii.gz", "_desc-confounds_timeseries.tsv")
-            confounds_regex = confounds_regex = r'^(?:trans|rot)_[xyz](?:$|_(?:derivative1|power2|derivative1_power2)$)|global_signal(?:$|_derivative1|_power2|_derivative1_power2)$|a_comp_cor_.*|non_steady_state_outlier.*|motion_outlier.*|framewise_displacement$'
-
-            confounds = pd.read_csv(confounds_path, sep='\t')
-            confounds = confounds.filter(regex=confounds_regex)
-            confounds = confounds.fillna(0)
-            
-            #confounds_coef = np.linalg.lstsq(confounds, Y_residual)
-            #Y_residual_cleaned = Y_residual - confounds @ confounds_coef
-            #Yhat_m = Y_signal + Y_residual_cleaned
 
             C = confounds.to_numpy(dtype=np.float64)          # (T, P)
             C = np.column_stack([np.ones((C.shape[0], 1)), C])  # add intercept -> (T, P+1)
@@ -170,17 +169,6 @@ if __name__ == '__main__':
             Y_signal = A_all[:, manual_signals-1] @ C_all[manual_signals-1, :]
             Y_residual = Ymat - A_all @ C_all
 
-            confounds_path = bold_filenames[file_idx].replace("_space-T1w_desc-preproc_bold.nii.gz", "_desc-confounds_timeseries.tsv")
-            confounds_regex = confounds_regex = r'^(?:trans|rot)_[xyz](?:$|_(?:derivative1|power2|derivative1_power2)$)|global_signal(?:$|_derivative1|_power2|_derivative1_power2)$|a_comp_cor_.*|non_steady_state_outlier.*|motion_outlier.*|framewise_displacement$'
-
-            confounds = pd.read_csv(confounds_path, sep='\t')
-            confounds = confounds.filter(regex=confounds_regex)
-            confounds = confounds.fillna(0)
-            
-            #confounds_coef = np.linalg.lstsq(confounds, Y_residual)
-            #Y_residual_cleaned = Y_residual - confounds @ confounds_coef
-            #Yhat_m = Y_signal + Y_residual_cleaned
-
             C = confounds.to_numpy(dtype=np.float64)          # (T, P)
             C = np.column_stack([np.ones((C.shape[0], 1)), C])  # add intercept -> (T, P+1)
             
@@ -191,6 +179,22 @@ if __name__ == '__main__':
             Yres_clean_T = Yres_T - C @ beta                   # (T, V)
             Y_residual_cleaned = Yres_clean_T.T.astype(np.float32)  # (V, T)
             Yhat_m = Y_signal + Y_residual_cleaned
+            
+        elif clean_mode == 'cleansignal':
+            C_all = Aall_pinv @ Ymat
+            Y_noise = A_all[:, noise_idx] @ C_all[noise_idx, :]
+            Y_residual = Ymat - Y_noise
+
+            C = confounds.to_numpy(dtype=np.float64)          # (T, P)
+            C = np.column_stack([np.ones((C.shape[0], 1)), C])  # add intercept -> (T, P+1)
+            
+            # Y_residual is (V, T); transpose to (T, V) to fit
+            Yres_T = Y_residual.T.astype(np.float64)          # (T, V)
+            
+            beta, *_ = np.linalg.lstsq(C, Yres_T, rcond=None) # (P+1, V)
+            Yres_clean_T = Yres_T - C @ beta                   # (T, V)
+            Y_residual_cleaned = Yres_clean_T.T.astype(np.float32)  # (V, T)
+            Yhat_m = Y_residual_cleaned
 
         Yhat_4d = Yhat_m.reshape(X, Y, Z, T)
 
@@ -258,6 +262,13 @@ if __name__ == '__main__':
 
     cx(args.container, home_dir, args.bind, cmd)
 
+    #smooth 2mm
+    smoothed_DS = os.path.join(out_root, "clean_merge_all_2mm.dtseries.nii")
+
+    cx(args.container, home_dir, args.bind,
+       f"wb_command -cifti-smoothing {_shlex(merged_DS)} 2 0 COLUMN {_shlex(smoothed_DS)} "
+       f"-left-surface {_shlex(LMID)} -right-surface {_shlex(RMID)} -fwhm")
+    
     #make spec file
     spec_path = os.path.join(out_root, "merged_all.spec")
     with open(spec_path.replace('.spec', '.json'), 'w') as f:

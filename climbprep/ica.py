@@ -17,6 +17,7 @@ import nibabel as nib
 import matplotlib
 matplotlib.use('Agg')  # headless
 import matplotlib.pyplot as plt
+import climbprep.convert_inflated
 
 from nilearn import surface
 
@@ -415,7 +416,12 @@ if __name__ == '__main__':
     shutil.rmtree(tmpdir)
 
     # ----------------- Workbench packaging (.spec + volume & surface ICs) -----------------
-    spec_path = os.path.join(out_root, f"sub-{participant}{ses_str_anat}_{save_name}_label-{ica_label}.spec")
+    if participant[0:4] != 'sub-':
+        climbprep.convert_inflated.main([project, 'sub-' + participant])
+    else:
+        climbprep.convert_inflated.main([project, participant])
+
+    spec_path = os.path.join(out_root, f"sub-{participant}{ses_str_anat}_{save_name}.spec")
     with open(spec_path.replace('.spec', '.json'), 'w') as f:
         json.dump(dict(Description='Specification to load ICA outputs (volume & surface ICs) into wb_view.'), f, indent=2)
 

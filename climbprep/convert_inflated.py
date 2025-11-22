@@ -68,7 +68,7 @@ def main(argv=None):
     #convert L and R hemisphere
     for hemi_codes in [['lh','L'],['rh','R']]:
         # 2) Build the path to the FS inflated surface produced by fMRIPrep
-        matches = list((out_root / "sourcedata" / "freesurfer").rglob("**/" + hemi_codes[0] + ".inflated"))
+        matches = list((out_root / "sourcedata" / "freesurfer" / sub / "surf").rglob("**/" + hemi_codes[0] + ".inflated"))
         h_inflated = matches[0]
         
         if not h_inflated.exists():
